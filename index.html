@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通用 Favicon 下载器</title>
+    <!-- Add a favicon for the site itself -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233B82F6'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-12h2v4h3l-4 4-4-4h3v-4z'/%3E%3C/svg%3E">
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JSZip library for creating ZIP files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- FileSaver.js for saving files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+    <style>
+        body {
+            /* 使用系统字体栈，移除对 Google Fonts 的依赖 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+        }
+        .loader {
+            border-top-color: #3498db;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Style for disabled elements */
+        select:disabled {
+            background-color: #e5e7eb; /* gray-200 */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .dark select:disabled {
+            background-color: #4b5563; /* gray-600 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="container mx-auto max-w-4xl w-full">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 dark:text-white">通用 Favicon 下载器</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">获取任意网站的高质量 PNG 或 ICO 图标</p>
+        </header>
+
+        <main class="grid md:grid-cols-2 gap-8">
+            <!-- Single Download Module -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">单个下载</h2>
+                <div class="space-y-4">
+                    <input type="text" id="singleUrlInput" placeholder="例如：google.com" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    
+                    <!-- Format and Size Options -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="singleFormat" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">格式</label>
+                            <select id="singleFormat" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="png" selected>PNG</option>
+                                <option value="ico">ICO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="singleSize" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">尺寸 (PNG)</label>
+                            <select id="singleSize" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="256">256x256</option>
+                                <option value="128">128x128</option>
+                                <option value="64" selected>64x64</option>
+                                <option value="48">48x48</option>
+                                <option value="32">32x32</option>
+                                <option value="16">16x16</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <button id="previewBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" /></svg>
+                            预览
+                        </button>
+                        <button id="singleDownloadBtn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            下载
+                        </button>
+                    </div>
+                    <div id="previewContainer" class="mt-4 text-center p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg min-h-[100px] flex items-center justify-center">
+                        <span class="text-gray-500">图标预览区域</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Download Module -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">批量下载</h2>
+                <div class="space-y-4">
+                    <textarea id="batchUrlInput" rows="6" placeholder="每行一个 URL, 例如：&#10;github.com&#10;youtube.com&#10;wikipedia.org" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    
+                     <!-- Batch Format and Size Options -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="batchFormat" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">格式</label>
+                            <select id="batchFormat" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="png" selected>PNG</option>
+                                <option value="ico">ICO</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="batchSize" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">尺寸 (PNG)</label>
+                            <select id="batchSize" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="64" selected>64x64</option>
+                                <option value="32">32x32</option>
+                                <option value="16">16x16</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button id="batchDownloadBtn" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                        <span id="batchBtnText">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            打包下载 (.zip)
+                        </span>
+                        <div id="batchLoader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 hidden"></div>
+                    </button>
+                    <div id="batchStatus" class="text-sm text-gray-600 dark:text-gray-400 mt-2 min-h-[20px]"></div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Toast Notification -->
+        <div id="toast" class="fixed top-5 right-5 bg-red-500 text-white py-2 px-4 rounded-lg shadow-lg opacity-0 transform -translate-y-10 transition-all duration-300">
+            <p id="toastMessage"></p>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element Selection ---
+            const singleUrlInput = document.getElementById('singleUrlInput');
+            const previewBtn = document.getElementById('previewBtn');
+            const singleDownloadBtn = document.getElementById('singleDownloadBtn');
+            const previewContainer = document.getElementById('previewContainer');
+            const singleFormat = document.getElementById('singleFormat');
+            const singleSize = document.getElementById('singleSize');
+            
+            const batchUrlInput = document.getElementById('batchUrlInput');
+            const batchDownloadBtn = document.getElementById('batchDownloadBtn');
+            const batchStatus = document.getElementById('batchStatus');
+            const batchLoader = document.getElementById('batchLoader');
+            const batchBtnText = document.getElementById('batchBtnText');
+            const batchFormat = document.getElementById('batchFormat');
+            const batchSize = document.getElementById('batchSize');
+
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+
+            // --- API Endpoints ---
+            const GOOGLE_API_URL = 'https://google-proxy.mealuet.com/s2/favicons?sz=';
+            const DUCKDUCKGO_API_URL = 'https://duckduckgo-proxy.mealuet.com/ip3/';
+
+            // --- Utility Functions ---
+
+            /**
+             * Shows a toast notification.
+             * @param {string} message - The message to display.
+             * @param {string} type - 'error' or 'success'.
+             */
+            function showToast(message, type = 'error') {
+                toastMessage.textContent = message;
+                toast.className = `fixed top-5 right-5 text-white py-2 px-4 rounded-lg shadow-lg transition-all duration-300 opacity-100 transform translate-y-0`;
+                toast.classList.add(type === 'error' ? 'bg-red-500' : 'bg-green-500');
+                
+                setTimeout(() => {
+                    toast.className = toast.className.replace('opacity-100 translate-y-0', 'opacity-0 -translate-y-10');
+                }, 3000);
+            }
+
+            /**
+             * Cleans a URL to get the base domain.
+             * @param {string} url - The input URL.
+             * @returns {string} The cleaned domain name.
+             */
+            function cleanUrl(url) {
+                if (!url) return '';
+                try {
+                    let fullUrl = url.trim();
+                    if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+                        fullUrl = 'http://' + fullUrl;
+                    }
+                    const urlObject = new URL(fullUrl);
+                    return urlObject.hostname.replace(/^www\./, '');
+                } catch (e) {
+                    const domainMatch = url.trim().match(/^(?:https?:\/\/)?(?:www\.)?([^\/]+)/);
+                    return domainMatch ? domainMatch[1] : '';
+                }
+            }
+
+            /**
+             * Gets the correct favicon URL based on selected format.
+             * @param {string} domain - The domain name.
+             * @param {string} format - 'png' or 'ico'.
+             * @param {string} size - The size for PNG icons (e.g., '64').
+             * @returns {string} The full URL to the favicon.
+             */
+            function getFaviconUrl(domain, format, size) {
+                if (format === 'png') {
+                    return `${GOOGLE_API_URL}${size}&domain=${domain}`;
+                }
+                // For ICO, use the DuckDuckGo proxy which is reliable for .ico files
+                return `${DUCKDUCKGO_API_URL}${domain}.ico`;
+            }
+
+             /**
+             * Toggles the disabled state of the size selector based on the format.
+             * @param {HTMLSelectElement} formatSelect - The format dropdown.
+             * @param {HTMLSelectElement} sizeSelect - The size dropdown.
+             */
+            function toggleSizeSelector(formatSelect, sizeSelect) {
+                sizeSelect.disabled = formatSelect.value !== 'png';
+            }
+
+            // --- Event Listeners & Initialization ---
+
+            singleFormat.addEventListener('change', () => toggleSizeSelector(singleFormat, singleSize));
+            batchFormat.addEventListener('change', () => toggleSizeSelector(batchFormat, batchSize));
+            
+            // Set initial state on load
+            toggleSizeSelector(singleFormat, singleSize);
+            toggleSizeSelector(batchFormat, batchSize);
+
+
+            // --- Single Download Logic ---
+
+            previewBtn.addEventListener('click', () => {
+                const domain = cleanUrl(singleUrlInput.value);
+                if (!domain) {
+                    showToast('请输入一个有效的 URL。');
+                    return;
+                }
+                const format = singleFormat.value;
+                const size = singleSize.value;
+                const faviconUrl = getFaviconUrl(domain, format, size);
+                
+                previewContainer.innerHTML = `<img src="${faviconUrl}" alt="${domain} favicon" class="w-16 h-16 object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'text-red-500\'>无法加载图标</span>';"/>`;
+            });
+
+            singleDownloadBtn.addEventListener('click', async () => {
+                const domain = cleanUrl(singleUrlInput.value);
+                if (!domain) {
+                    showToast('请输入一个有效的 URL。');
+                    return;
+                }
+                
+                const format = singleFormat.value;
+                const size = singleSize.value;
+                const faviconUrl = getFaviconUrl(domain, format, size);
+                const filename = `${domain}.${format}`;
+
+                try {
+                    const response = await fetch(faviconUrl);
+                    if (!response.ok) {
+                        throw new Error(`无法获取图标，服务器状态: ${response.status}`);
+                    }
+                    const blob = await response.blob();
+                    
+                    // The ICO proxy might return HTML on failure. Google API usually returns a default icon.
+                    if (format === 'ico' && blob.type.includes('text/html')) {
+                       throw new Error('未找到该网站的 .ico 文件。');
+                    }
+
+                    saveAs(blob, filename);
+                } catch (error) {
+                    console.error('下载失败:', error);
+                    showToast(error.message || '下载图标时发生错误。');
+                }
+            });
+
+            // --- Batch Download Logic ---
+            
+            batchDownloadBtn.addEventListener('click', async () => {
+                const urls = batchUrlInput.value.split('\n').filter(u => u.trim() !== '');
+                if (urls.length === 0) {
+                    showToast('请在文本框中输入 URL。');
+                    return;
+                }
+
+                batchDownloadBtn.disabled = true;
+                batchLoader.classList.remove('hidden');
+                batchBtnText.classList.add('hidden');
+                batchStatus.textContent = '正在初始化...';
+
+                const zip = new JSZip();
+                let successCount = 0;
+                let errorCount = 0;
+                const format = batchFormat.value;
+                const size = batchSize.value;
+
+                for (let i = 0; i < urls.length; i++) {
+                    const url = urls[i];
+                    const domain = cleanUrl(url);
+                    
+                    if (!domain) {
+                        errorCount++;
+                        batchStatus.textContent = `(${i + 1}/${urls.length}) 跳过无效 URL: ${url}`;
+                        continue;
+                    }
+
+                    batchStatus.textContent = `(${i + 1}/${urls.length}) 正在下载: ${domain}...`;
+                    const faviconUrl = getFaviconUrl(domain, format, size);
+
+                    try {
+                        const response = await fetch(faviconUrl);
+                        if (!response.ok) throw new Error('网络响应错误');
+                        
+                        const blob = await response.blob();
+                         if (format === 'ico' && blob.type.includes('text/html')) {
+                            throw new Error('未找到 .ico 文件');
+                        }
+
+                        zip.file(`${domain}.${format}`, blob);
+                        successCount++;
+                    } catch (error) {
+                        console.error(`获取 ${domain} 的 favicon 失败:`, error);
+                        errorCount++;
+                    }
+                    // A short delay to avoid rate-limiting issues
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                if (successCount > 0) {
+                    batchStatus.textContent = `正在生成 ZIP 文件...`;
+                    zip.generateAsync({ type: 'blob' })
+                        .then(content => {
+                            saveAs(content, 'favicons.zip');
+                            batchStatus.textContent = `完成！成功 ${successCount} 个, 失败 ${errorCount} 个。`;
+                            showToast(`成功下载 ${successCount} 个图标!`, 'success');
+                        });
+                } else {
+                    batchStatus.textContent = `任务完成，但未能成功下载任何图标。`;
+                    showToast('所有图标均下载失败。', 'error');
+                }
+
+                batchDownloadBtn.disabled = false;
+                batchLoader.classList.add('hidden');
+                batchBtnText.classList.remove('hidden');
+            });
+        });
+    </script>
+</body>
+</html>
